@@ -1,0 +1,223 @@
+{
+  "HYDRO": {
+    "Circuit_HOT": {
+      "MEDIUM": "PbBi",
+      "CRITICAL_FLOW": false,
+      "ELEMENT": {
+        "Pipe_in_HOT": {
+          "TYPE": 1,
+          "L": 0.2,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 90,
+          "FRIC_MODE": "DEFAULT",
+          "SAMPLING": [
+            0
+          ]
+        },
+        "Pipe_HX_HOT": {
+          "TYPE": 1,
+          "L": 1,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 10,
+          "θ": 90,
+          "ϕ": 90,
+          "FRIC_MODE": "DEFAULT"
+        },
+        "Pipe_out_HOT": {
+          "TYPE": 1,
+          "L": 0.2,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 90,
+          "FRIC_MODE": "DEFAULT",
+          "SAMPLING": [
+            0
+          ]
+        },
+        "TDJ_HOT": {
+          "TYPE": 5,
+          "L": 0.5,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 90
+        },
+        "TDV_HOT": {
+          "TYPE": 4,
+          "L": 0.5,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 90
+        }
+      },
+      "LINKTABLE": {
+        "Pipe_HX_HOT": [
+          "Pipe_out_HOT"
+        ],
+        "Pipe_in_HOT": [
+          "Pipe_HX_HOT"
+        ],
+        "Pipe_out_HOT": [
+          "TDV_HOT"
+        ],
+        "TDJ_HOT": [
+          "Pipe_in_HOT"
+        ]
+      }
+    },
+    "Circuit_COLD": {
+      "MEDIUM": "PbBi",
+      "CRITICAL_FLOW": false,
+      "ELEMENT": {
+        "Pipe_in_COLD": {
+          "TYPE": 1,
+          "L": 0.2,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 270,
+          "FRIC_MODE": "DEFAULT",
+          "SAMPLING": [
+            0
+          ]
+        },
+        "Pipe_HX_COLD": {
+          "TYPE": 1,
+          "L": 1,
+          "A": 0.0078539815,
+          "χ": 0.9803230000000001,
+          "NODE_NUM": 10,
+          "θ": 90,
+          "ϕ": 270,
+          "FRIC_MODE": "DEFAULT"
+        },
+        "Pipe_out_COLD": {
+          "TYPE": 1,
+          "L": 0.2,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 270,
+          "FRIC_MODE": "DEFAULT",
+          "SAMPLING": [
+            0
+          ]
+        },
+        "TDJ_COLD": {
+          "TYPE": 5,
+          "L": 0.5,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 270
+        },
+        "TDV_COLD": {
+          "TYPE": 4,
+          "L": 0.5,
+          "A": 0.0078539815,
+          "χ": 0.31415926,
+          "NODE_NUM": 1,
+          "θ": 90,
+          "ϕ": 270
+        }
+      },
+      "LINKTABLE": {
+        "Pipe_HX_COLD": [
+          "Pipe_out_COLD"
+        ],
+        "Pipe_in_COLD": [
+          "Pipe_HX_COLD"
+        ],
+        "Pipe_out_COLD": [
+          "TDV_COLD"
+        ],
+        "TDJ_COLD": [
+          "Pipe_in_COLD"
+        ]
+      }
+    }
+  },
+  "THERMO": {
+    "@": {
+      "HeatStructure1": {
+        "TYPE": 1,
+        "NUM": 1,
+        "SIZE": [0.1,0.14
+        ],
+        "MEDIUM": "Steel",
+        "NODE_NUM": [
+          3,
+          10
+        ],
+        "L": 1.0,
+        "BOUNDARY_CONDITION": {
+          "INNER": [
+            4,
+            "Circuit_HOT:Pipe_HX_HOT&LiquidMetalForced&1.0"
+          ],
+          "OUTER": [
+            4,
+            "-Circuit_COLD:Pipe_HX_COLD&LiquidMetalForced&1.0"
+          ],
+          "TOP": [
+            2,0
+          ],
+          "BOTTOM": [
+            2,0
+          ]
+        },
+        "SAMPLING": [
+          0
+        ]
+      }
+    }
+  },
+  "CONTROL": {
+    "COND": {},
+    "ACTION": {
+      "act1": {
+        "OBJECT": [
+          "HYDRO:Circuit_COLD:TDJ_COLD"
+        ],
+        "TYPE": "Q",
+        "VALUE": 3.5,
+        "ACTOR": {
+          "TYPE": "PID",
+          "X": "HYDRO:Circuit_COLD:Pipe_out_COLD:0:T",
+          "K": [0.0002,0.0058,0.15
+          ],
+          "VAL": 220
+        }
+      }
+    }
+  },
+  "NUCLEAR": {
+    "REACTOR_OPERATION_TIME": 0,
+    "NEUTRON_SOURCE": 0,
+    "PROMPT_NEUTRON_GENERATION_TIME": 0.00002,
+    "DELAYED_NEUTRON_GROUP": {
+      "FRACTION": [0.000266,0.001491,0.001316,0.002849,0.000896,0.000182
+      ],
+      "DECAY_CONSTANT": [0.0127,0.0317,0.115,0.311,1.4,3.87
+      ]
+    },
+    "DECAY_HEAT_GROUP": {
+      "FRACTION": [0.000266,0.001491,0.001316,0.002849,0.000896,0.000182
+      ],
+      "DECAY_CONSTANT": [0.0127,0.0317,0.115,0.311,1.4,3.87
+      ]
+    }
+  }
+}
