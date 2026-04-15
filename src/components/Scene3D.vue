@@ -28,9 +28,9 @@
     </div>
 
     <div class="scene-controls">
-      <button class="control-btn text-btn" @click="setView('front')" title="正视图">正视图</button>
-      <button class="control-btn text-btn" @click="setView('left')" title="左视图">左视图</button>
-      <button class="control-btn text-btn" @click="setView('top')" title="俯视图">俯视图</button>
+      <button class="control-btn text-btn" @click="setFrontView" title="正视图">正视图</button>
+      <button class="control-btn text-btn" @click="setLeftView" title="左视图">左视图</button>
+      <button class="control-btn text-btn" @click="setTopView" title="俯视图">俯视图</button>
       <button class="control-btn text-btn" @click="fitToWindow" title="适应窗口">适应窗口</button>
       <button class="control-btn" @click="showGrid = !showGrid" :class="{ active: showGrid }" title="显示/隐藏网格">⊞</button>
       <button class="control-btn" @click="showAxes = !showAxes" :class="{ active: showAxes }" title="显示/隐藏坐标轴">📐</button>
@@ -61,15 +61,17 @@ const showGrid = ref(false)
 const showAxes = ref(false)
 
 /**
- * 核心逻辑：计算场景真实包围盒
+ * 计算当前场景中所有元素端点的真实物理包围盒
+ * (这个函数刚才被不小心删掉了，现在补回来，并且去掉了多余的 Scale)
  */
 function computeSceneBoundingBox() {
   const box = new THREE.Box3()
-  
+
   elements.value.forEach((el) => {
     if (!el.position) return
-    const start = new THREE.Vector3(...el.position)
-    
+
+    const start = new THREE.Vector3(el.position[0], el.position[1], el.position[2])
+
     let theta = el.zenithAngle ?? 90
     let phi = el.azimuthAngle ?? 0
     if (el.type === 'Pool') {
@@ -78,138 +80,145 @@ function computeSceneBoundingBox() {
     }
 
     const [dx, dy, dz] = getDirectionVector(theta, phi)
+    const length = el.length || 0
     const end = new THREE.Vector3(
-      start.x + dx * (el.length || 0),
-      start.y + dy * (el.length || 0),
-      start.z + dz * (el.length || 0)
+      start.x + dx * length,
+      start.y + dy * length,
+      start.z + dz * length
     )
 
     box.expandByPoint(start)
     box.expandByPoint(end)
   })
 
-  // 如果场景为空，提供一个默认大小
   if (box.isEmpty()) {
     box.setFromCenterAndSize(new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 10, 10))
   }
+
   return box
 }
 
 /**
- * 适应窗口：通过 BoundingSphere 简化距离计算，避免过度复杂的点积运算
+ * 核心逻辑：将相机聚焦到指定的包围盒，并设置观察方向
  */
-function fitToWindow() {
+function focusBox(direction) {
   const camera = cameraRef.value
-  const controls = controlsRef.value
-  if (!camera || !controls) return
-
-  const box = computeSceneBoundingBox()
-  const center = new THREE.Vector3()
-  box.getCenter(center)
   
-  // 获取包围球的半径，保证所有物体都能装下
-  const sphere = new THREE.Sphere()
-  box.getBoundingSphere(sphere)
-  const radius = sphere.radius || 10
-
-  // 根据相机的 fov 计算需要的距离 (乘以 1.2 留出边缘空白)
-  const fovRad = camera.fov * THREE.MathUtils.DEG2RAD
-  const distance = (radius / Math.sin(fovRad / 2)) * 1.2
-
-  // 保持相机当前观察方向，向后拉远
-  const direction = new THREE.Vector3()
-  camera.getWorldDirection(direction)
-  
-  camera.position.copy(center).sub(direction.multiplyScalar(distance))
-  controls.target.copy(center)
-  
-  camera.updateProjectionMatrix()
-  controls.update()
-}
-
-/**
- * 统一处理三视图切换
- */
-function setView(viewType) {
-  const camera = cameraRef.value
-  const controls = controlsRef.value
-  if (!camera || !controls) return
-
-  const box = computeSceneBoundingBox()
-  const center = new THREE.Vector3()
-  box.getCenter(center)
-  
-  const sphere = new THREE.Sphere()
-  box.getBoundingSphere(sphere)
-  const distance = (sphere.radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.5
-
-  // 重置相机的 Up 向量，防止控制系统错乱
-  camera.up.set(0, 1, 0)
-
-  if (viewType === 'front') {
-    camera.position.set(center.x, center.y, center.z + distance)
-  } else if (viewType === 'left') {
-    camera.position.set(center.x + distance, center.y, center.z)
-  } else if (viewType === 'top') {
-    // 俯视图不要动 up 向量，直接放到 Y 轴高处向下看即可
-    camera.position.set(center.x, center.y + distance, center.z + 0.001) // 微小偏移防止奇异点
+  // 【防弹解包】：适配不同版本的 TresJS/Cientos 实例暴露方式
+  let controls = null
+  if (controlsRef.value) {
+    controls = controlsRef.value.value || 
+               controlsRef.value.instance || 
+               controlsRef.value.controls || 
+               controlsRef.value
   }
 
-  controls.target.copy(center)
-  camera.lookAt(center)
-  camera.updateProjectionMatrix()
-  controls.update()
+  // 【致命错误拦截】：如果还没拿到真正的 ThreeJS 实例，或者 target 没准备好，立刻终止
+  if (!camera || !controls || !controls.target) {
+    console.warn('⚠️ 视图仍在初始化中，跳过本次调整')
+    return
+  }
+
+  try {
+    const box = computeSceneBoundingBox()
+    const center = new THREE.Vector3()
+    box.getCenter(center)
+    
+    const sphere = new THREE.Sphere()
+    box.getBoundingSphere(sphere)
+    const radius = sphere.radius === 0 ? 10 : sphere.radius
+
+    const fov = camera.fov * (Math.PI / 180)
+    const aspect = camera.aspect || 1
+    let distance = (radius / Math.sin(fov / 2)) * 1.2
+    if (aspect < 1) distance = distance / aspect
+
+    // 此时 controls.target 百分之百存在，安全执行 copy
+    controls.target.copy(center)
+
+    const cameraPos = direction.clone().normalize().multiplyScalar(distance).add(center)
+    camera.position.copy(cameraPos)
+
+    camera.lookAt(center)
+    camera.updateProjectionMatrix()
+    controls.update()
+  } catch (error) {
+    console.error('视图切换异常:', error)
+  }
 }
 
-// 动态更新坐标轴（恢复了跟随相机旋转的逻辑）
+function fitToWindow() {
+  if (!cameraRef.value) return
+  const currentDir = new THREE.Vector3()
+  cameraRef.value.getWorldDirection(currentDir).negate()
+  focusBox(currentDir)
+}
+
+function setFrontView() {
+  if (cameraRef.value) cameraRef.value.up.set(0, 1, 0)
+  focusBox(new THREE.Vector3(0, 0, 1))
+}
+
+function setLeftView() {
+  if (cameraRef.value) cameraRef.value.up.set(0, 1, 0)
+  focusBox(new THREE.Vector3(-1, 0, 0))
+}
+
+function setTopView() {
+  if (cameraRef.value) cameraRef.value.up.set(0, 1, 0)
+  focusBox(new THREE.Vector3(0, 1, 0.0001))
+}
+
+// 动态更新坐标轴
 let rafId
 const updateGizmo = () => {
   const cam = cameraRef.value
   if (!cam) return
   
-  // 提取相机旋转四元数的逆向
   const q = cam.quaternion.clone().invert()
   
-  // 【核心魔法】：定义物理（工程）坐标系在 Three.js 里的真实对应关系
-  
-  // 物理 X 轴 (向右) -> 对应 Three.js 的 +X
+  // 物理映射逻辑
   const physicalX = new THREE.Vector3(0, 0, 1)
-  
-  // 物理 Y 轴 (桌面纵深) -> 对应 Three.js 的 -Z (向屏幕里面)
   const physicalY = new THREE.Vector3(1, 0, 0)
-  
-  // 物理 Z 轴 (垂直高度) -> 对应 Three.js 的 +Y (向上)
   const physicalZ = new THREE.Vector3(0, 1, 0)
 
-  // 将物理向量投影到 2D 屏幕上
   const vX = physicalX.applyQuaternion(q)
   const vY = physicalY.applyQuaternion(q)
   const vZ = physicalZ.applyQuaternion(q)
   
-  // 绑定到 Vue 响应式变量，SVG 会自动更新
   projX.value = { x: vX.x, y: vX.y }
   projY.value = { x: vY.x, y: vY.y }
   projZ.value = { x: vZ.x, y: vZ.y }
 }
 
-onMounted(async () => {
+onMounted(() => {
   if (cameraRef.value) {
     cameraRef.value.position.set(10, 10, 20)
   }
 
-  // 启动渲染循环以更新 Gizmo
   const loop = () => {
     updateGizmo()
     rafId = requestAnimationFrame(loop)
   }
   loop()
 
-  await nextTick()
-  setTimeout(() => fitToWindow(), 100)
-})
+  // 【智能轮询】：代替不可靠的 setTimeout(..., 100)
+  // 每 50 毫秒检查一次，直到 3D 控制器真正挂载完毕再执行首次适应窗口
+  const checkReady = setInterval(() => {
+    let controls = null
+    if (controlsRef.value) {
+      controls = controlsRef.value.value || 
+                 controlsRef.value.instance || 
+                 controlsRef.value.controls || 
+                 controlsRef.value
+    }
 
-onUnmounted(() => {
-  cancelAnimationFrame(rafId)
+    // 只要发现了 target，就说明底层引擎活过来了
+    if (cameraRef.value && controls && controls.target) {
+      clearInterval(checkReady) // 停止检查
+      fitToWindow() // 执行完美的居中复位
+    }
+  }, 50)
 })
 
 const onCanvasClick = (event) => {
