@@ -150,6 +150,37 @@ function onUpdateElement(updatedElement) {
 </script>
 
 <style scoped>
+/* 1. 强制锁死主区域高度为：屏幕总高度(100vh) - 顶部导航栏高度(通常是64px) */
+/* 使用 Vuetify 内置变量 --v-layout-top 自动适配导航栏 */
+:deep(.v-main) {
+  height: calc(100vh - var(--v-layout-top, 64px)) !important;
+  max-height: calc(100vh - var(--v-layout-top, 64px)) !important;
+  overflow: hidden !important; 
+  display: flex;
+  flex-direction: column;
+}
+
+/* 2. 容器和行必须严格继承锁死后的高度 */
+:deep(.v-container.fill-height) {
+  height: 100% !important;
+  flex: 1 1 auto;
+  align-items: stretch;
+}
+
+:deep(.v-row.fill-height) {
+  height: 100% !important;
+  max-height: 100%;
+  flex-wrap: nowrap;
+}
+
+/* 3. 左右面板：锁定高度，超出内容只在内部滚动 */
+.panel-left, .panel-right {
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto; /* 关键：内部滚动条 */
+  flex-shrink: 0;   /* 防止侧边栏被意外挤压 */
+}
+
 .panel-left {
   width: 260px;
   min-width: 220px;
@@ -160,19 +191,46 @@ function onUpdateElement(updatedElement) {
   width: 320px;
   min-width: 280px;
   max-width: 420px;
+  background-color: white; /* 选填：防止透明导致重叠 */
 }
 
+/* 4. 中间 3D 画布：禁止溢出，固定在屏幕中央 */
 .panel-center {
   min-width: 0;
+  flex-grow: 1;
+  height: 100%;
   position: relative;
+  overflow: hidden; /* 绝对禁止画布内容溢出 */
 }
 
+/* 响应式调整 */
 @media (max-width: 900px) {
-  .panel-left {
-    width: 200px;
-  }
-  .panel-right {
-    width: 240px;
-  }
+  .panel-left { width: 200px; }
+  .panel-right { width: 240px; }
+}
+
+/* 滚动条美化 */
+.panel-left::-webkit-scrollbar,
+.panel-right::-webkit-scrollbar {
+  width: 6px;
+}
+.panel-left::-webkit-scrollbar-thumb,
+.panel-right::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+.panel-left::-webkit-scrollbar-thumb:hover,
+.panel-right::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+</style>
+
+/* --- 终极保险措施 --- */
+/* 如果以上还不行，这会强制禁用整个网页本身的滚动条 */
+<style>
+html, body {
+  overflow: hidden !important;
+  height: 100vh;
+  margin: 0;
 }
 </style>

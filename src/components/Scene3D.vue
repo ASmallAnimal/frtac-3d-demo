@@ -11,9 +11,11 @@
       <TresGridHelper v-if="showGrid" :args="[20, 20, 0x888888, 0xcccccc]" />
       <TresAxesHelper v-if="showAxes" :args="[5]" />
 
-      <template v-for="element in elements" :key="element.id">
-        <HydraulicElement3D :element="element" />
-      </template>
+      <TresGroup ref="modelGroupRef">
+        <template v-for="element in elements" :key="element.id">
+          <HydraulicElement3D :element="element" />
+        </template>
+      </TresGroup>
     </TresCanvas>
 
     <div class="axis-gizmo">
@@ -60,82 +62,125 @@ const projZ = ref({ x: 0, y: 0 })
 const showGrid = ref(false)
 const showAxes = ref(false)
 
+
+// 新增对 3D 组的引用
+const modelGroupRef = ref(null)
+
 /**
- * 计算当前场景中所有元素端点的真实物理包围盒
- * (这个函数刚才被不小心删掉了，现在补回来，并且去掉了多余的 Scale)
+ * 终极包围盒算法：直接测量渲染出来的真实 3D 几何体
  */
 function computeSceneBoundingBox() {
   const box = new THREE.Box3()
 
-  elements.value.forEach((el) => {
-    if (!el.position) return
+  // 1. 最精确的方法：直接读取真实的 3D 对象边界
+  const group = modelGroupRef.value?.value || modelGroupRef.value
+  if (group && group.children.length > 0) {
+    group.updateMatrixWorld(true) // 强制刷新世界坐标
+    box.setFromObject(group)      // 让 Three.js 自己去框选所有模型
+  }
 
-    const start = new THREE.Vector3(el.position[0], el.position[1], el.position[2])
-
-    let theta = el.zenithAngle ?? 90
-    let phi = el.azimuthAngle ?? 0
-    if (el.type === 'Pool') {
-      theta = (theta !== 0 && theta !== 180) ? 180 : theta
-      phi = 0
-    }
-
-    const [dx, dy, dz] = getDirectionVector(theta, phi)
-    const length = el.length || 0
-    const end = new THREE.Vector3(
-      start.x + dx * length,
-      start.y + dy * length,
-      start.z + dz * length
-    )
-
-    box.expandByPoint(start)
-    box.expandByPoint(end)
-  })
+  // 2. 兜底方法：如果 3D 对象还没渲染完，再用数学算一下骨架
+  if (box.isEmpty()) {
+    elements.value.forEach((el) => {
+      if (!el.position) return
+      const start = new THREE.Vector3(el.position[0], el.position[1], el.position[2])
+      let theta = el.zenithAngle ?? 90
+      let phi = el.azimuthAngle ?? 0
+      if (el.type === 'Pool') {
+        theta = (theta !== 0 && theta !== 180) ? 180 : theta
+        phi = 0
+      }
+      const [dx, dy, dz] = getDirectionVector(theta, phi)
+      const length = el.length || 0
+      const end = new THREE.Vector3(
+        start.x + dx * length,
+        start.y + dy * length,
+        start.z + dz * length
+      )
+      box.expandByPoint(start)
+      box.expandByPoint(end)
+    })
+  }
 
   if (box.isEmpty()) {
     box.setFromCenterAndSize(new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 10, 10))
   }
-
   return box
 }
 
 /**
- * 核心逻辑：将相机聚焦到指定的包围盒，并设置观察方向
+ * 核心逻辑：精准聚焦包围盒（保守策略：取宽/高适配的最大距离）
  */
 function focusBox(direction) {
   const camera = cameraRef.value
-  
-  // 【防弹解包】：适配不同版本的 TresJS/Cientos 实例暴露方式
-  let controls = null
-  if (controlsRef.value) {
-    controls = controlsRef.value.value || 
-               controlsRef.value.instance || 
-               controlsRef.value.controls || 
-               controlsRef.value
-  }
+  const controls = controlsRef.value?.value || controlsRef.value?.instance || controlsRef.value?.controls || controlsRef.value
 
-  // 【致命错误拦截】：如果还没拿到真正的 ThreeJS 实例，或者 target 没准备好，立刻终止
-  if (!camera || !controls || !controls.target) {
-    console.warn('⚠️ 视图仍在初始化中，跳过本次调整')
-    return
-  }
+  if (!camera || !controls || !controls.target) return
 
   try {
+    // 1. 获取模型真实包围盒
     const box = computeSceneBoundingBox()
     const center = new THREE.Vector3()
     box.getCenter(center)
     
-    const sphere = new THREE.Sphere()
-    box.getBoundingSphere(sphere)
-    const radius = sphere.radius === 0 ? 10 : sphere.radius
+    // 2. 获取包围盒在当前视角下的“视觉尺寸”
+    const size = new THREE.Vector3()
+    box.getSize(size)
 
-    const fov = camera.fov * (Math.PI / 180)
-    const aspect = camera.aspect || 1
-    let distance = (radius / Math.sin(fov / 2)) * 1.2
-    if (aspect < 1) distance = distance / aspect
+    // 获取画布真实的物理宽高比
+    const canvas = document.querySelector('.scene-3d canvas')
+    const aspect = canvas ? (canvas.clientWidth / canvas.clientHeight) : (camera.aspect || 1)
+    const fovRad = camera.fov * (Math.PI / 180)
 
-    // 此时 controls.target 百分之百存在，安全执行 copy
+    // 3. 计算适配高度所需的距离
+    // 公式：dist = (height / 2) / tan(fov / 2)
+    // 我们需要判断在当前方向下，哪个轴是“高度”方向
+    // 为了简化并保证“保守”，我们取 box 三个维度中在屏幕投影方向上的最大体现
+    
+    // 更加精确的保守算法：
+    // 计算包围盒在相机坐标系下的投影
+    const vDir = direction.clone().normalize()
+    const vUp = new THREE.Vector3(0, 1, 0)
+    const vRight = new THREE.Vector3().crossVectors(vUp, vDir).normalize()
+    const vRealUp = new THREE.Vector3().crossVectors(vDir, vRight).normalize()
+
+    // 计算 8 个顶点在 Right 和 Up 方向上的最大跨度
+    const corners = [
+      new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+      new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+      new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+      new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+      new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+      new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+      new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+      new THREE.Vector3(box.max.x, box.max.y, box.max.z),
+    ]
+
+    let minW = Infinity, maxW = -Infinity
+    let minH = Infinity, maxH = -Infinity
+
+    corners.forEach(corner => {
+      const w = corner.dot(vRight)
+      const h = corner.dot(vRealUp)
+      minW = Math.min(minW, w); maxW = Math.max(maxW, w)
+      minH = Math.min(minH, h); maxH = Math.max(maxH, h)
+    })
+
+    const modelW = maxW - minW
+    const modelH = maxH - minH
+
+    // 4. 根据保守策略计算距离
+    // 适配高度的距离
+    const distH = (modelH / 2) / Math.tan(fovRad / 2)
+    // 适配宽度的距离 (宽度受 aspect 影响)
+    const distW = (modelW / 2) / Math.tan(fovRad / 2) / aspect
+
+    // 取两者中较大的一个，确保任何方向都不会超出画布
+    // 加上 1.1 的系数（留出 10% 的安全边距），这比之前的 1.5 会大很多，更显眼
+    const distance = Math.max(distH, distW) * 1.1
+
+    // 5. 应用位置
     controls.target.copy(center)
-
     const cameraPos = direction.clone().normalize().multiplyScalar(distance).add(center)
     camera.position.copy(cameraPos)
 
@@ -143,7 +188,7 @@ function focusBox(direction) {
     camera.updateProjectionMatrix()
     controls.update()
   } catch (error) {
-    console.error('视图切换异常:', error)
+    console.error('视图调整异常:', error)
   }
 }
 
