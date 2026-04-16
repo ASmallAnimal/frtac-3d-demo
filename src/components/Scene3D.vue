@@ -55,7 +55,7 @@ import { MapControls } from '@tresjs/cientos'
 import * as THREE from 'three'
 import { useTopologyStore } from '../store/topologyStore.ts'
 import HydraulicElement3D from './HydraulicElement3D.vue'
-import { getDirectionVector } from '../utils/geometry/topologyLayout.ts'
+import { getDirectionVector } from '../utils/topologyLayout.ts'
 
 const store = useTopologyStore()
 const elements = computed(() => store.elementList)
