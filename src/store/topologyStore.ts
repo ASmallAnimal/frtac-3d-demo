@@ -1,66 +1,67 @@
-// src/stores/topologyStore.ts
+// src/store/topologyStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { Circuit, HydraulicElement, TopologyData } from '../models/hydro/topology.ts';
-import { computeCircuitPositions } from '../utils/topologyLayout.ts';
+import type { Circuit, HydraulicElement, TopologyData } from '../models/hydro/topology';
+import { layoutEngine } from '../utils/geometry/topologyLayout';
+import { LAYOUT_CONFIG } from '../config/constants';
 
 export const useTopologyStore = defineStore('topology', () => {
   // ==========================================
   // 1. State (状态)
   // ==========================================
 
-  // 存储所有回路
+  /** 存储所有回路 */
   const circuits = ref<Record<string, Circuit>>({});
 
-  // 当前选中的回路名称
+  /** 当前选中的回路名称 */
   const currentCircuitName = ref<string>('');
 
-  // 当前选中的组件
+  /** 当前选中的组件 */
   const selectedElement = ref<HydraulicElement | null>(null);
 
-  // 工程是否已加载
+  /** 工程是否已加载 */
   const isLoaded = ref(false);
 
   // ==========================================
   // 2. Getters (计算属性)
   // ==========================================
 
-  // 获取当前回路
+  /** 获取当前回路 */
   const currentCircuit = computed(() => {
     return currentCircuitName.value
       ? circuits.value[currentCircuitName.value]
       : undefined;
   });
 
-  // 获取当前回路的所有组件（数组形式，便于 UI 渲染）
+  /** 获取当前回路的所有组件（数组形式，便于 UI 渲染） */
   const elementList = computed(() => {
     const circuit = currentCircuit.value;
     return circuit ? Object.values(circuit.elements) : [];
   });
 
-  // 获取所有回路名称列表
+  /** 获取所有回路名称列表 */
   const circuitNames = computed(() => Object.keys(circuits.value));
 
-  // 获取当前回路的管道组件
+  /** 获取当前回路的管道组件 */
   const pipes = computed(() => elementList.value.filter(e => e.type === 'Pipe'));
 
-  // 获取当前回路的水泵组件
+  /** 获取当前回路的水泵组件 */
   const pumps = computed(() => elementList.value.filter(e => e.type === 'Pump'));
 
-  // 获取当前回路的时变体积组件
+  /** 获取当前回路的时变体积组件 */
   const timeDependentVolumes = computed(() =>
     elementList.value.filter(e => e.type === 'TimeDependentVolume')
   );
 
-  // 获取当前回路的时变连接组件
+  /** 获取当前回路的时变连接组件 */
   const timeDependentJunctions = computed(() =>
     elementList.value.filter(e => e.type === 'TimeDependentJunction')
   );
 
-  // 统计当前回路组件总数
+  /** 统计当前回路组件总数 */
   const totalElements = computed(() => elementList.value.length);
 
-  // 统计所有回路组件总数
+  /** 统计所有回路组件总数 */
   const totalElementsAllCircuits = computed(() => {
     return Object.values(circuits.value).reduce(
       (sum, circuit) => sum + Object.keys(circuit.elements).length,
@@ -94,16 +95,14 @@ export const useTopologyStore = defineStore('topology', () => {
    * 为所有回路重新计算 3D 坐标
    */
   function recalcAllPositions() {
-    let globalOffset = 0;
-    Object.values(circuits.value).forEach((circuit) => {
-      computeCircuitPositions(circuit, [globalOffset, 0, 0]);
-      globalOffset += 12; // 回路之间水平间距
-    });
+    layoutEngine.computeMultipleCircuits(
+      circuits.value,
+      LAYOUT_CONFIG.DEFAULT_CIRCUIT_SPACING
+    );
   }
 
   /**
    * 切换当前回路
-   * @param circuitName 回路名称
    */
   function selectCircuit(circuitName: string) {
     if (circuits.value[circuitName]) {
@@ -123,12 +122,12 @@ export const useTopologyStore = defineStore('topology', () => {
   }
 
   /**
-   * 获取回路当前的全局偏移量（简化：根据 circuits 的遍历顺序）
+   * 获取回路当前的全局偏移量
    */
   function getCircuitOffset(circuit: Circuit): [number, number, number] {
     const names = Object.keys(circuits.value);
     const idx = names.findIndex((name) => circuits.value[name] === circuit);
-    return [idx * 12, 0, 0];
+    return [idx * LAYOUT_CONFIG.DEFAULT_CIRCUIT_SPACING, 0, 0];
   }
 
   /**
@@ -142,8 +141,6 @@ export const useTopologyStore = defineStore('topology', () => {
 
   /**
    * 更新某个组件的特定属性
-   * @param elementId 组件ID
-   * @param partialData 要更新的部分数据
    */
   function updateElement(elementId: string, partialData: Partial<HydraulicElement>) {
     const circuit = currentCircuit.value;
@@ -155,7 +152,10 @@ export const useTopologyStore = defineStore('topology', () => {
 
       // 若修改了影响布局的属性，重新计算坐标
       if (shouldRecalc(partialData)) {
-        computeCircuitPositions(circuit, getCircuitOffset(circuit));
+        layoutEngine.computeCircuitPositions(circuit, {
+          offset: getCircuitOffset(circuit),
+          forceRecalc: true
+        });
       }
     }
   }
@@ -176,7 +176,10 @@ export const useTopologyStore = defineStore('topology', () => {
       } as HydraulicElement;
 
       if (shouldRecalc(partialData)) {
-        computeCircuitPositions(circuit, getCircuitOffset(circuit));
+        layoutEngine.computeCircuitPositions(circuit, {
+          offset: getCircuitOffset(circuit),
+          forceRecalc: true
+        });
       }
     }
   }
@@ -203,8 +206,6 @@ export const useTopologyStore = defineStore('topology', () => {
 
   /**
    * 在当前回路中添加连接
-   * @param fromId 源组件ID
-   * @param toId 目标组件ID
    */
   function addConnection(fromId: string, toId: string) {
     const circuit = currentCircuit.value;
@@ -221,7 +222,6 @@ export const useTopologyStore = defineStore('topology', () => {
 
   /**
    * 在当前回路中移除连接
-   * @param connectionId 连接ID
    */
   function removeConnection(connectionId: string) {
     const circuit = currentCircuit.value;
@@ -265,7 +265,6 @@ export const useTopologyStore = defineStore('topology', () => {
 
   /**
    * 设置选中的组件
-   * @param element 选中的组件，null 表示取消选中
    */
   function setSelectedElement(element: HydraulicElement | null) {
     selectedElement.value = element;

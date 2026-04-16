@@ -3,29 +3,29 @@
 
         <template v-if="element.type === 'Valve'">
             <TresMesh :position="[0, length / 4, 0]" @click="onElementClick">
-                <TresConeGeometry :args="[radius, length / 2, 32]" />
+                <TresConeGeometry :args="[radius, length / 2, GEOMETRY_CONFIG.RADIAL_SEGMENTS]" />
                 <TresMeshStandardMaterial :color="elementColor" />
             </TresMesh>
             <TresMesh :position="[0, (length * 3) / 4, 0]" :rotation="[Math.PI, 0, 0]" @click="onElementClick">
-                <TresConeGeometry :args="[radius, length / 2, 32]" />
+                <TresConeGeometry :args="[radius, length / 2, GEOMETRY_CONFIG.RADIAL_SEGMENTS]" />
                 <TresMeshStandardMaterial :color="elementColor" />
             </TresMesh>
         </template>
 
         <template v-else-if="isSelected">
             <TresMesh :position="[0, length / 4, 0]" @click="onElementClick">
-                <TresCylinderGeometry :args="[radius, radius, length / 2, 32]" />
+                <TresCylinderGeometry :args="[radius, radius, length / 2, GEOMETRY_CONFIG.RADIAL_SEGMENTS]" />
                 <TresMeshStandardMaterial :color="elementColor" />
             </TresMesh>
             <TresMesh :position="[0, (length * 3) / 4, 0]" @click="onElementClick">
-                <TresConeGeometry :args="[radius, length / 2, 32]" />
+                <TresConeGeometry :args="[radius, length / 2, GEOMETRY_CONFIG.RADIAL_SEGMENTS]" />
                 <TresMeshStandardMaterial :color="elementColor" />
             </TresMesh>
         </template>
 
         <template v-else>
             <TresMesh :position="[0, length / 2, 0]" @click="onElementClick">
-                <TresCylinderGeometry :args="[radius, radius, length, 32]" />
+                <TresCylinderGeometry :args="[radius, radius, length, GEOMETRY_CONFIG.RADIAL_SEGMENTS]" />
                 <TresMeshStandardMaterial :color="elementColor" />
             </TresMesh>
         </template>
@@ -36,6 +36,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useTopologyStore } from '../store/topologyStore.ts'
+import { ELEMENT_COLORS, GEOMETRY_CONFIG } from '../config/constants.ts'
 
 const props = defineProps({
     element: {
@@ -51,14 +52,14 @@ const isSelected = computed(() => {
     return store.selectedElement?.id === props.element.id
 })
 
-// 半径和长度 (去除所有引发 bug 的 scale)
+// 半径和长度
 const radius = computed(() => {
     return Math.sqrt((props.element.flowArea || 0.1) / Math.PI)
 })
 
 const length = computed(() => props.element.length || 0.1)
 
-// 【最稳妥的坐标】直接使用算法算出来的起始点，不加任何魔改
+// 直接使用算法算出来的起始点
 const elementPosition = computed(() => {
     if (props.element.position) {
         return [
@@ -75,7 +76,7 @@ const elementPosition = computed(() => {
     return [(hash % 10) * 2 - 8, 0, ((hash >> 4) % 10) * 2 - 8]
 })
 
-// 【最稳妥的旋转】回归最原始的欧拉角映射，配合 rotation-order="YXZ"
+// 欧拉角映射，配合 rotation-order="YXZ"
 const elementRotation = computed(() => {
     let theta = props.element.zenithAngle ?? 90
     let phi = props.element.azimuthAngle ?? 0
@@ -90,18 +91,9 @@ const elementRotation = computed(() => {
 
 // 根据类型返回颜色
 const elementColor = computed(() => {
-    if (isSelected.value) return '#ffcc00'
+    if (isSelected.value) return ELEMENT_COLORS.Selected
 
-    switch (props.element.type) {
-        case 'Pipe': return '#44aaff'
-        case 'Pump': return '#ffaa44'
-        case 'Bufffertank': return '#ff8844'
-        case 'Pool': return '#44ffdd'
-        case 'TimeDependentVolume': return '#44ff88'
-        case 'TimeDependentJunction': return '#aa44ff'
-        case 'Valve': return '#ff4444'
-        default: return '#aaaaaa'
-    }
+    return ELEMENT_COLORS[props.element.type] || ELEMENT_COLORS.Default
 })
 
 const onElementClick = (event) => {
