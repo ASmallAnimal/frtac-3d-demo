@@ -1,7 +1,14 @@
 <template>
   <v-app class="bg-background">
     <!-- 顶部菜单栏 -->
-    <MenuBar @load-json="loadSystemJson" @save="saveProject" />
+    <MenuBar
+      @load-json="loadSystemJson"
+      @save="saveProject"
+      @view-front="sceneRef?.setFrontView"
+      @view-left="sceneRef?.setLeftView"
+      @view-top="sceneRef?.setTopView"
+      @view-fit="sceneRef?.fitToWindow"
+    />
 
     <v-main class="pa-0">
       <v-container fluid class="fill-height pa-0">
@@ -11,14 +18,14 @@
             <SystemTree />
           </v-col>
 
-          <v-divider vertical />
+          <v-divider vertical class="border-opacity-25" />
 
           <!-- 中部：3D 场景 -->
           <v-col class="panel-center">
-            <Scene3D />
+            <Scene3D ref="sceneRef" />
           </v-col>
 
-          <v-divider vertical />
+          <v-divider vertical class="border-opacity-25" />
 
           <!-- 右侧：属性编辑 -->
           <v-col cols="auto" class="panel-right">
@@ -31,7 +38,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import MenuBar from './components/MenuBar.vue'
 import SystemTree from './components/SystemTree.vue'
 import Scene3D from './components/Scene3D.vue'
@@ -40,8 +48,10 @@ import { useTopologyStore } from './store/topologyStore.ts'
 import systemJson from './examples/system.json'
 import { typeCodeToElementType } from './models/hydro/topology.ts'
 
+const { t } = useI18n()
 const store = useTopologyStore()
 const selectedElement = computed(() => store.selectedElement)
+const sceneRef = ref(null)
 
 /**
  * 解析 JSON 中的 HYDRO 数据为 TopologyData
@@ -123,10 +133,10 @@ function loadSystemJson() {
         if (json.HYDRO) {
           store.initTopology(parseHydroData(json.HYDRO))
         } else {
-          alert('JSON 文件中未找到 HYDRO 字段')
+          alert(t('app.hydroFieldMissing'))
         }
       } catch (err) {
-        alert('JSON 解析失败：' + err.message)
+        alert(t('app.jsonParseError', { msg: err.message }))
       }
     }
     reader.readAsText(file)
@@ -135,8 +145,8 @@ function loadSystemJson() {
 }
 
 function saveProject() {
-  console.log('保存项目', store.circuits)
-  alert('项目已保存到控制台')
+  console.log(t('app.saveProject'), store.circuits)
+  alert(t('app.projectSaved'))
 }
 
 function onUpdateElement(updatedElement) {
@@ -191,7 +201,7 @@ function onUpdateElement(updatedElement) {
   width: 320px;
   min-width: 280px;
   max-width: 420px;
-  background-color: white; /* 选填：防止透明导致重叠 */
+  background-color: rgb(var(--v-theme-surface));
 }
 
 /* 4. 中间 3D 画布：禁止溢出，固定在屏幕中央 */
@@ -216,12 +226,12 @@ function onUpdateElement(updatedElement) {
 }
 .panel-left::-webkit-scrollbar-thumb,
 .panel-right::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: #bfdbfe;
   border-radius: 4px;
 }
 .panel-left::-webkit-scrollbar-thumb:hover,
 .panel-right::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
+  background: #93c5fd;
 }
 </style>
 

@@ -8,15 +8,15 @@ export default createVuetify({
   components,
   directives,
   theme: {
-    defaultTheme: 'dark',
+    defaultTheme: 'light',
     themes: {
-      dark: {
+      light: {
         colors: {
-          background: '#0f0f14',
-          surface: '#16171d',
-          primary: '#7c3aed',
-          secondary: '#c084fc',
-          accent: '#8b5cf6',
+          background: '#f0f7ff',
+          surface: '#ffffff',
+          primary: '#3b82f6',
+          secondary: '#60a5fa',
+          accent: '#0ea5e9',
           error: '#ef4444',
           info: '#3b82f6',
           success: '#22c55e',

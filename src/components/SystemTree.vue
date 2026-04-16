@@ -1,11 +1,11 @@
 <template>
   <v-sheet color="surface" class="d-flex flex-column fill-height" rounded="0">
     <v-toolbar density="compact" color="transparent" flat class="px-2">
-      <v-toolbar-title class="text-body-1 font-weight-semibold">系统目录</v-toolbar-title>
-      <v-chip size="x-small" color="secondary" variant="tonal">{{ totalElements }} 个组件</v-chip>
+      <v-toolbar-title class="text-body-1 font-weight-semibold text-primary">{{ $t('systemTree.title') }}</v-toolbar-title>
+      <v-chip size="x-small" color="primary" variant="tonal">{{ $t('systemTree.componentsCount', { count: totalElements }) }}</v-chip>
     </v-toolbar>
-    <v-divider />
-    <v-list density="compact" nav class="flex-1 overflow-y-auto py-1">
+    <v-divider class="border-opacity-25" />
+    <v-list density="compact" nav class="flex-1 overflow-y-auto py-1" bg-color="surface">
       <v-list-group
         v-for="(circuit, circuitName) in circuits"
         :key="circuitName"
@@ -16,16 +16,17 @@
             v-bind="listProps"
             :active="currentCircuitName === circuitName"
             color="primary"
+            base-color="primary"
             @click="selectCircuit(circuitName)"
           >
             <template #prepend>
-              <v-icon icon="mdi-lightning-bolt" size="small" />
+              <v-icon icon="mdi-lightning-bolt" size="small" color="primary" />
             </template>
             <v-list-item-title class="text-body-2 font-weight-medium">
               {{ circuitName }}
             </v-list-item-title>
             <template #append>
-              <v-chip size="x-small" color="secondary" variant="tonal" class="ml-2">
+              <v-chip size="x-small" color="primary" variant="tonal" class="ml-2">
                 {{ circuit.medium }}
               </v-chip>
             </template>
@@ -36,17 +37,18 @@
           :key="element.id"
           :active="selectedElement?.id === element.id"
           color="primary"
+          base-color="primary"
           class="pl-6"
           @click="selectElement(element)"
         >
           <template #prepend>
-            <v-icon :icon="getElementIcon(element.type)" size="small" />
+            <v-icon :icon="getElementIcon(element.type)" size="small" color="primary" />
           </template>
           <v-list-item-title class="text-caption">
             {{ element.name || element.id }}
           </v-list-item-title>
           <template #append>
-            <v-chip size="x-small" color="default" variant="tonal">
+            <v-chip size="x-small" color="secondary" variant="tonal">
               {{ element.type }}
             </v-chip>
           </template>

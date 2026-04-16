@@ -1,0 +1,64 @@
+{
+  "menu": {
+    "file": "文件",
+    "edit": "编辑",
+    "view": "视图",
+    "tools": "工具",
+    "help": "帮助",
+    "loadJson": "加载JSON",
+    "save": "保存",
+    "preferences": "偏好",
+    "language": "语言"
+  },
+  "systemTree": {
+    "title": "系统目录",
+    "componentsCount": "{count} 个组件"
+  },
+  "propertyPanel": {
+    "title": "属性编辑",
+    "emptyHint": "选择组件以编辑属性",
+    "basicInfo": "基本信息",
+    "id": "ID",
+    "name": "名称",
+    "type": "类型",
+    "geometry": "几何参数",
+    "length": "长度 L (m)",
+    "flowArea": "流通面积 A (m²)",
+    "wettedPerimeter": "湿周 χ (m)",
+    "nodeNum": "节点数",
+    "orientation": "方向角",
+    "zenithAngle": "天顶角 θ (°)",
+    "azimuthAngle": "方位角 ϕ (°)",
+    "pipeProps": "管道特性",
+    "fricMode": "摩擦模式",
+    "sampling": "采样点",
+    "pumpProps": "泵特性",
+    "ratedHead": "额定扬程 (m)",
+    "ratedFlow": "额定流量 (m³/s)",
+    "valveProps": "阀门特性",
+    "valveArea": "阀门开度面积 (m²)",
+    "valveState": "阀门状态",
+    "open": "开启",
+    "closed": "关闭",
+    "apply": "应用更改",
+    "reset": "重置"
+  },
+  "scene3D": {
+    "frontView": "正视图",
+    "leftView": "左视图",
+    "topView": "俯视图",
+    "fitWindow": "适应窗口",
+    "toggleGrid": "显示/隐藏网格",
+    "toggleAxes": "显示/隐藏坐标轴"
+  },
+  "app": {
+    "hydroFieldMissing": "JSON 文件中未找到 HYDRO 字段",
+    "jsonParseError": "JSON 解析失败：{msg}",
+    "saveProject": "保存项目",
+    "projectSaved": "项目已保存到控制台"
+  },
+  "lang": {
+    "zh": "中文",
+    "en": "English"
+  }
+}

@@ -36,14 +36,14 @@
         </div>
 
         <div class="scene-controls">
-            <button class="control-btn text-btn" @click="setFrontView" title="正视图">正视图</button>
-            <button class="control-btn text-btn" @click="setLeftView" title="左视图">左视图</button>
-            <button class="control-btn text-btn" @click="setTopView" title="俯视图">俯视图</button>
-            <button class="control-btn text-btn" @click="fitToWindow" title="适应窗口">适应窗口</button>
+            <button class="control-btn text-btn" @click="setFrontView" :title="$t('scene3D.frontView')">{{ $t('scene3D.frontView') }}</button>
+            <button class="control-btn text-btn" @click="setLeftView" :title="$t('scene3D.leftView')">{{ $t('scene3D.leftView') }}</button>
+            <button class="control-btn text-btn" @click="setTopView" :title="$t('scene3D.topView')">{{ $t('scene3D.topView') }}</button>
+            <button class="control-btn text-btn" @click="fitToWindow" :title="$t('scene3D.fitWindow')">{{ $t('scene3D.fitWindow') }}</button>
             <button class="control-btn" @click="showGrid = !showGrid" :class="{ active: showGrid }"
-                title="显示/隐藏网格">⊞</button>
+                :title="$t('scene3D.toggleGrid')">⊞</button>
             <button class="control-btn" @click="showAxes = !showAxes" :class="{ active: showAxes }"
-                title="显示/隐藏坐标轴">📐</button>
+                :title="$t('scene3D.toggleAxes')">📐</button>
         </div>
     </div>
 </template>
@@ -131,7 +131,7 @@ function focusBox(direction) {
         const center = new THREE.Vector3()
         box.getCenter(center)
 
-        // 2. 获取包围盒在当前视角下的“视觉尺寸”
+        // 2. 获取包围盒在当前视角下的"视觉尺寸"
         const size = new THREE.Vector3()
         box.getSize(size)
 
@@ -142,8 +142,8 @@ function focusBox(direction) {
 
         // 3. 计算适配高度所需的距离
         // 公式：dist = (height / 2) / tan(fov / 2)
-        // 我们需要判断在当前方向下，哪个轴是“高度”方向
-        // 为了简化并保证“保守”，我们取 box 三个维度中在屏幕投影方向上的最大体现
+        // 我们需要判断在当前方向下，哪个轴是"高度"方向
+        // 为了简化并保证"保守"，我们取 box 三个维度中在屏幕投影方向上的最大体现
 
         // 更加精确的保守算法：
         // 计算包围盒在相机坐标系下的投影
@@ -279,6 +279,13 @@ const onCanvasClick = (event) => {
         store.clearSelection()
     }
 }
+
+defineExpose({
+    setFrontView,
+    setLeftView,
+    setTopView,
+    fitToWindow,
+})
 </script>
 
 <style scoped>
@@ -301,15 +308,15 @@ const onCanvasClick = (event) => {
 .control-btn {
     width: 36px;
     height: 36px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.8);
-    color: #333;
+    background: rgba(255, 255, 255, 0.85);
+    color: #1e3a8a;
     font-size: 16px;
     cursor: pointer;
     transition: all 0.2s;
     backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -318,13 +325,14 @@ const onCanvasClick = (event) => {
 .control-btn:hover {
     background: rgba(255, 255, 255, 1);
     transform: scale(1.05);
-    border-color: #7c3aed;
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
 .control-btn.active {
-    background: #7c3aed;
+    background: #3b82f6;
     color: white;
-    border-color: #7c3aed;
+    border-color: #3b82f6;
 }
 
 .control-btn.text-btn {
@@ -340,10 +348,10 @@ const onCanvasClick = (event) => {
     left: 16px;
     width: 80px;
     height: 80px;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.85);
     border-radius: 8px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;

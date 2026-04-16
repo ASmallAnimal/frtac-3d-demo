@@ -1,0 +1,64 @@
+{
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "view": "View",
+    "tools": "Tools",
+    "help": "Help",
+    "loadJson": "Load JSON",
+    "save": "Save",
+    "preferences": "Preferences",
+    "language": "Language"
+  },
+  "systemTree": {
+    "title": "System Directory",
+    "componentsCount": "{count} components"
+  },
+  "propertyPanel": {
+    "title": "Properties",
+    "emptyHint": "Select a component to edit properties",
+    "basicInfo": "Basic Info",
+    "id": "ID",
+    "name": "Name",
+    "type": "Type",
+    "geometry": "Geometry",
+    "length": "Length L (m)",
+    "flowArea": "Flow Area A (m²)",
+    "wettedPerimeter": "Wetted Perimeter χ (m)",
+    "nodeNum": "Node Count",
+    "orientation": "Orientation",
+    "zenithAngle": "Zenith Angle θ (°)",
+    "azimuthAngle": "Azimuth Angle ϕ (°)",
+    "pipeProps": "Pipe Properties",
+    "fricMode": "Friction Mode",
+    "sampling": "Sampling Points",
+    "pumpProps": "Pump Properties",
+    "ratedHead": "Rated Head (m)",
+    "ratedFlow": "Rated Flow (m³/s)",
+    "valveProps": "Valve Properties",
+    "valveArea": "Valve Area (m²)",
+    "valveState": "Valve State",
+    "open": "Open",
+    "closed": "Closed",
+    "apply": "Apply",
+    "reset": "Reset"
+  },
+  "scene3D": {
+    "frontView": "Front View",
+    "leftView": "Left View",
+    "topView": "Top View",
+    "fitWindow": "Fit to Window",
+    "toggleGrid": "Show/Hide Grid",
+    "toggleAxes": "Show/Hide Axes"
+  },
+  "app": {
+    "hydroFieldMissing": "HYDRO field not found in JSON file",
+    "jsonParseError": "JSON parse failed: {msg}",
+    "saveProject": "Save Project",
+    "projectSaved": "Project saved to console"
+  },
+  "lang": {
+    "zh": "中文",
+    "en": "English"
+  }
+}
